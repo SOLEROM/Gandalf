@@ -1,0 +1,465 @@
+abstract_factory:
+  category: creational
+  spec_file: patterns/creational/abstract_factory.md
+  intent: create families of related or compatible objects without specifying their concrete classes
+  signals:
+    - multiple related products are created together as a family
+    - creation logic must preserve compatibility across product variants
+    - code switches between product families such as platform, theme, vendor, or environment
+    - client depends on several concrete product classes from the same family
+    - object creation is grouped around a family concept rather than a single product
+  anti_signals:
+    - only one product type varies
+    - construction complexity is mainly step-by-step assembly
+    - the main problem is cloning existing configured objects
+  refactor_mode: single
+  can_chain_with:
+    - factory_method
+    - bridge
+    - builder
+  priority: 8
+
+builder:
+  category: creational
+  spec_file: patterns/creational/builder.md
+  intent: separate the construction of a complex object from its representation so the same construction process can create different forms
+  signals:
+    - object creation requires many ordered steps
+    - constructors are telescoping or have too many optional parameters
+    - the same object is assembled differently for different outputs or configurations
+    - partially built state appears during creation
+    - construction workflow is more complex than the object's runtime behavior
+  anti_signals:
+    - creation is just selecting one subclass among alternatives
+    - products are mainly families of related objects
+    - object state should be copied from an existing instance
+  refactor_mode: single
+  can_chain_with:
+    - abstract_factory
+    - prototype
+  priority: 8
+
+factory_method:
+  category: creational
+  spec_file: patterns/creational/factory_method.md
+  intent: define an interface for creating an object while letting subclasses decide which concrete class to instantiate
+  signals:
+    - a base workflow creates one variable product type
+    - code uses conditionals to choose which concrete product to instantiate
+    - subclasses differ primarily in which product they create
+    - object creation varies but the surrounding algorithm remains stable
+    - direct new or constructor calls cause coupling to concrete products
+  anti_signals:
+    - multiple related products must vary together as a family
+    - creation complexity is mostly multi-step assembly
+    - behavior variation is more important than creation variation
+  refactor_mode: single
+  can_chain_with:
+    - abstract_factory
+    - strategy
+    - template_method
+  priority: 9
+
+prototype:
+  category: creational
+  spec_file: patterns/creational/prototype.md
+  intent: create new objects by cloning existing prototype instances
+  signals:
+    - object creation is expensive and existing configured instances can be copied
+    - many objects share a common baseline state with small variations
+    - code manually duplicates large initialization logic to create similar objects
+    - runtime needs to register and duplicate template instances
+    - copying existing state is more natural than constructing from scratch
+  anti_signals:
+    - object creation is mainly controlled by subclass selection
+    - the key problem is assembling objects through ordered steps
+    - identity-sensitive resources make naive cloning unsafe
+  refactor_mode: single
+  can_chain_with:
+    - builder
+    - abstract_factory
+  priority: 6
+
+singleton:
+  category: creational
+  spec_file: patterns/creational/singleton.md
+  intent: ensure a class has only one instance and provide a global access point to it
+  signals:
+    - exactly one logical instance must coordinate shared state or shared infrastructure
+    - code manually stores and reuses a global instance
+    - repeated instantiation would break semantics or waste scarce resources
+    - lazy initialization of one shared service appears in multiple places
+    - access pattern is global and singular by design
+  anti_signals:
+    - the object is only convenient to share but not semantically unique
+    - global mutable state would create hidden coupling and testing problems
+    - dependency injection would solve the sharing problem cleanly
+  refactor_mode: single
+  can_chain_with:
+    - facade
+    - flyweight
+  priority: 4
+
+adapter:
+  category: structural
+  spec_file: patterns/structural/adapter.md
+  intent: convert the interface of an existing class into another interface clients expect
+  signals:
+    - an existing class cannot be used because its interface is incompatible
+    - wrapper code translates one API shape into another
+    - client logic expects one contract but available services expose a different contract
+    - integration code performs repetitive argument or method mapping
+    - legacy or third-party classes need to fit an internal interface
+  anti_signals:
+    - the interface should remain the same while behavior is extended
+    - the real problem is simplifying a subsystem rather than translating an API
+    - the system needs tree composition rather than interface conversion
+  refactor_mode: single
+  can_chain_with:
+    - facade
+    - bridge
+  priority: 8
+
+bridge:
+  category: structural
+  spec_file: patterns/structural/bridge.md
+  intent: decouple abstraction from implementation so both can vary independently
+  signals:
+    - class hierarchy grows as a cross product of two dimensions
+    - domain abstraction is mixed with infrastructure or execution mechanism
+    - conditionals select implementation type inside high-level logic
+    - subclasses differ mostly by execution mechanism rather than business intent
+    - two orthogonal axes of variation should evolve independently
+  anti_signals:
+    - behavior differs mainly by interchangeable algorithm
+    - wrapper preserves interface and adds optional responsibilities
+    - the main problem is interface incompatibility
+  refactor_mode: single
+  can_chain_with:
+    - abstract_factory
+    - factory_method
+  priority: 9
+
+composite:
+  category: structural
+  spec_file: patterns/structural/composite.md
+  intent: compose objects into tree structures so clients can treat individual objects and compositions uniformly
+  signals:
+    - part-whole hierarchy appears naturally in the domain
+    - leaf objects and groups should share the same client-facing interface
+    - client code branches on whether an item is single or a collection node
+    - recursive processing over hierarchical structures is common
+    - container nodes and leaf nodes should be handled uniformly
+  anti_signals:
+    - the goal is adding responsibilities dynamically around one object
+    - the main issue is traversing a collection without exposing structure
+    - objects mostly coordinate peer interactions instead of forming a tree
+  refactor_mode: single
+  can_chain_with:
+    - iterator
+    - visitor
+    - decorator
+  priority: 8
+
+decorator:
+  category: structural
+  spec_file: patterns/structural/decorator.md
+  intent: add responsibilities to objects dynamically without subclass explosion
+  signals:
+    - optional features are stacked around a core object
+    - many subclasses represent combinations of features or behaviors
+    - wrappers preserve the same interface as the wrapped object
+    - responsibilities should be composed at runtime rather than fixed by inheritance
+    - feature combination growth is the main source of class explosion
+  anti_signals:
+    - wrapper mainly converts one interface into another
+    - the primary problem is abstraction versus implementation separation
+    - object graph is a tree of parts and wholes
+  refactor_mode: single
+  can_chain_with:
+    - factory_method
+    - composite
+  priority: 9
+
+facade:
+  category: structural
+  spec_file: patterns/structural/facade.md
+  intent: provide a unified high-level interface to a complex subsystem
+  signals:
+    - clients must call many subsystem classes in the correct order
+    - subsystem usage is noisy, repetitive, or fragile
+    - client code knows too much about internal subsystem structure
+    - most callers need only a simplified subset of subsystem capabilities
+    - onboarding or use of a subsystem requires too much orchestration knowledge
+  anti_signals:
+    - the main problem is incompatible interfaces
+    - peer objects are too tightly coupled and need centralized coordination
+    - dynamic behavior layering is more relevant than simplification
+  refactor_mode: single
+  can_chain_with:
+    - singleton
+    - adapter
+    - proxy
+  priority: 7
+
+flyweight:
+  category: structural
+  spec_file: patterns/structural/flyweight.md
+  intent: share fine-grained objects efficiently to support large numbers of similar instances
+  signals:
+    - system creates huge numbers of small similar objects
+    - many objects share identical intrinsic state
+    - memory pressure comes from repeated immutable or reusable data
+    - extrinsic state can be supplied from the outside at use time
+    - object identity is less important than efficient reuse
+  anti_signals:
+    - each object carries unique mutable state that cannot be externalized
+    - the problem is single-instance coordination rather than mass sharing
+    - cloning preconfigured objects is more natural than sharing
+  refactor_mode: single
+  can_chain_with:
+    - singleton
+    - factory_method
+  priority: 5
+
+proxy:
+  category: structural
+  spec_file: patterns/structural/proxy.md
+  intent: provide a surrogate or placeholder that controls access to another object
+  signals:
+    - access needs lazy loading, caching, protection, remote indirection, or logging
+    - a stand-in object should preserve the same interface as the real subject
+    - object creation or access is expensive and should be deferred or mediated
+    - client should interact transparently while additional access control occurs
+    - wrappers intercept calls before delegating to a real object
+  anti_signals:
+    - wrapper mainly adds optional business responsibilities
+    - the main issue is interface translation
+    - subsystem simplification matters more than access mediation
+  refactor_mode: single
+  can_chain_with:
+    - facade
+    - decorator
+  priority: 7
+
+chain_of_responsibility:
+  category: behavioral
+  spec_file: patterns/behavioral/chain_of_responsibility.md
+  intent: pass a request along a chain of handlers until one handles it or the chain ends
+  signals:
+    - multiple handlers can process a request in sequence
+    - sender should not know which receiver handles the request
+    - request processing logic is currently a long conditional cascade
+    - handlers can be reordered, added, or removed independently
+    - pipeline or middleware style request processing is natural
+  anti_signals:
+    - one central object should coordinate colleagues explicitly
+    - requests should be encapsulated as standalone command objects
+    - all observers should react to the same event broadcast
+  refactor_mode: single
+  can_chain_with:
+    - command
+    - decorator
+  priority: 8
+
+command:
+  category: behavioral
+  spec_file: patterns/behavioral/command.md
+  intent: encapsulate a request as an object so it can be parameterized, queued, logged, undone, or composed
+  signals:
+    - actions need to be queued, retried, logged, undone, or scheduled
+    - invoker should not depend directly on receiver implementation
+    - operations are currently passed around as callbacks with growing complexity
+    - the same action needs metadata, history, or deferred execution
+    - request objects would simplify orchestration and lifecycle management
+  anti_signals:
+    - the main problem is choosing among interchangeable algorithms
+    - the key need is sequential request filtering by multiple handlers
+    - state snapshots matter more than encapsulated actions
+  refactor_mode: single
+  can_chain_with:
+    - memento
+    - chain_of_responsibility
+    - composite
+  priority: 9
+
+interpreter:
+  category: behavioral
+  spec_file: patterns/behavioral/interpreter.md
+  intent: define a representation for a grammar and an interpreter that evaluates sentences in that language
+  signals:
+    - business rules resemble a small domain-specific language
+    - logic is expressed as repeated conditional combinations of terms and operators
+    - expression trees such as and or not, comparisons, or rules are natural
+    - rules need to be composed, reused, and evaluated against context
+    - new grammar elements should be added as new expression classes
+  anti_signals:
+    - simple strategy swapping is enough without a grammar
+    - traversal over a collection is the main concern
+    - ad hoc parsing would remain tiny and not justify object structure
+  refactor_mode: single
+  can_chain_with:
+    - visitor
+    - composite
+  priority: 5
+
+iterator:
+  category: behavioral
+  spec_file: patterns/behavioral/iterator.md
+  intent: provide a way to traverse elements of a collection without exposing its internal representation
+  signals:
+    - client code depends on collection internals to traverse elements
+    - multiple traversal strategies are needed over the same aggregate
+    - collection and traversal responsibilities are mixed together
+    - custom data structures require uniform traversal APIs
+    - iteration logic is duplicated across clients
+  anti_signals:
+    - hierarchical composition is the primary issue rather than traversal
+    - the main problem is event broadcast or state-driven behavior
+    - built-in iteration already solves the problem cleanly
+  refactor_mode: single
+  can_chain_with:
+    - composite
+    - visitor
+  priority: 6
+
+mediator:
+  category: behavioral
+  spec_file: patterns/behavioral/mediator.md
+  intent: centralize complex communication and control between related objects
+  signals:
+    - many peer objects reference and coordinate with each other directly
+    - communication rules are scattered across colleagues
+    - object graph forms a tangled web of dependencies
+    - one central policy object could coordinate interactions more cleanly
+    - colleague behavior depends heavily on messages from multiple other colleagues
+  anti_signals:
+    - the main problem is simplifying client access to a subsystem
+    - communication is mostly one-to-many event broadcast
+    - request handling is better modeled as a pipeline of independent handlers
+  refactor_mode: single
+  can_chain_with:
+    - observer
+    - state
+  priority: 8
+
+memento:
+  category: behavioral
+  spec_file: patterns/behavioral/memento.md
+  intent: capture and externalize an object's internal state so it can be restored later without violating encapsulation
+  signals:
+    - undo, rollback, checkpoint, or restore behavior is needed
+    - code manually stores previous values inside the main object
+    - state history management is mixed into business logic
+    - snapshots of internal state are needed without exposing representation details
+    - changes should be reversible in a structured way
+  anti_signals:
+    - actions themselves need to be queued or logged as first-class objects
+    - the main problem is state-dependent behavior, not state history
+    - simple immutable replacement already solves rollback
+  refactor_mode: single
+  can_chain_with:
+    - command
+    - state
+  priority: 8
+
+observer:
+  category: behavioral
+  spec_file: patterns/behavioral/observer.md
+  intent: define a one-to-many dependency so when one object changes state all dependents are notified automatically
+  signals:
+    - one subject change should notify multiple dependent components
+    - code manually updates many listeners or dependents after a state change
+    - polling is used where push notification would be more natural
+    - publisher should not know concrete subscriber details
+    - event-driven or reactive flow is more natural than direct coupling
+  anti_signals:
+    - interactions require a central coordinator with rich collaboration logic
+    - only one receiver should handle a request
+    - interchangeable algorithms are more relevant than event propagation
+  refactor_mode: single
+  can_chain_with:
+    - mediator
+    - command
+  priority: 9
+
+state:
+  category: behavioral
+  spec_file: patterns/behavioral/state.md
+  intent: allow an object to alter its behavior when its internal state changes
+  signals:
+    - behavior changes based on lifecycle state such as draft, published, archived
+    - large conditionals branch on current state throughout the class
+    - transitions between states are explicit and meaningful
+    - state-specific behavior belongs in separate state objects
+    - object appears to change class-like behavior at runtime
+  anti_signals:
+    - behavior is chosen externally as a policy or algorithm
+    - the main need is preserving state history for undo
+    - a simple enum with tiny behavior is sufficient
+  refactor_mode: single
+  can_chain_with:
+    - memento
+    - mediator
+  priority: 9
+
+strategy:
+  category: behavioral
+  spec_file: patterns/behavioral/strategy.md
+  intent: define a family of interchangeable algorithms and encapsulate each one behind a common interface
+  signals:
+    - large if else or switch selects among algorithms
+    - one task can be performed by several interchangeable behaviors
+    - behavior should be selectable at runtime
+    - algorithm variation is the primary source of complexity
+    - a context delegates one policy decision to a replaceable object
+  anti_signals:
+    - two orthogonal dimensions of variation require abstraction versus implementation separation
+    - behavior changes because of internal lifecycle state transitions
+    - algorithm skeleton is fixed and only some steps vary
+  refactor_mode: single
+  can_chain_with:
+    - factory_method
+    - template_method
+  priority: 10
+
+template_method:
+  category: behavioral
+  spec_file: patterns/behavioral/template_method.md
+  intent: define the skeleton of an algorithm in a base class and let subclasses override specific steps
+  signals:
+    - workflows share the same overall algorithm order but differ in a few steps
+    - duplicated process structure appears across subclasses or services
+    - some steps must stay fixed while extension points vary
+    - inheritance-based customization is acceptable and algorithm skeleton is stable
+    - hooks or overridable primitive operations naturally fit the workflow
+  anti_signals:
+    - full behavior should be selected by composition at runtime
+    - there is no stable shared algorithm skeleton
+    - two-way double dispatch over an object structure is required
+  refactor_mode: single
+  can_chain_with:
+    - factory_method
+    - strategy
+  priority: 8
+
+visitor:
+  category: behavioral
+  spec_file: patterns/behavioral/visitor.md
+  intent: represent new operations over a stable object structure without changing the element classes
+  signals:
+    - object structure is stable but new operations keep being added
+    - logic for many operations is scattered across element classes
+    - type-specific behavior over heterogeneous elements causes conditionals or casts
+    - double dispatch would remove instanceof or type-switch logic
+    - traversal over a known set of element types must support multiple external operations
+  anti_signals:
+    - element structure changes frequently
+    - only one or two operations exist and do not justify visitor overhead
+    - the main issue is traversal rather than adding operations
+  refactor_mode: single
+  can_chain_with:
+    - composite
+    - iterator
+    - interpreter
+  priority: 7
