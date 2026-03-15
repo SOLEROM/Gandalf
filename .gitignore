@@ -1,0 +1,4 @@
+
+##
+10_tools/*
+!10_tools/clones.sh
