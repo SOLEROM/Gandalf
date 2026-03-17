@@ -1,4 +1,18 @@
+.env
+.env.local
+.env.*
+!.env.example
+
+node_modules/
+*node_modules/
+*.log
+bun.lock
+*.bun-build
+
+
+
 
 ##
 10_tools/*
 !10_tools/clones.sh
+!10_tools/readme.md
