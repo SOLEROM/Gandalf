@@ -9,6 +9,8 @@ node_modules/
 bun.lock
 *.bun-build
 
+*_pycache__/
+*.pyc
 
 
 
