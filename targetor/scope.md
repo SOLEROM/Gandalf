@@ -59,7 +59,7 @@ A lightweight remote execution system so a locally-running Claude CLI (with inte
 - Both deployed to the same directory; `MockSSHTransport` defaults `agent_path` to sibling `agent.py`
 
 ### client.py
-- `AgentConnection(transport)` — calls `transport.connect()` internally
+- `AgentConnection(transport, logger=None)` — calls `transport.connect()` internally
 - Background reader thread routes responses by `msg["id"]` into per-request `Queue`s
 - **Critical ordering**: register queue BEFORE writing to pipe (prevents race with fast responses)
 - `call(cmd, payload, timeout)` → single ok/error response; raises `AgentError` on error status
@@ -69,8 +69,10 @@ A lightweight remote execution system so a locally-running Claude CLI (with inte
 - `exec_cmd(stream=True)` returns iterator of message dicts
 - `AgentError(code, message)` — raised by `call()` and `call_streaming()` on error responses
 - Context manager: `with AgentConnection(transport) as conn:`
+- `Logger(path)` — thread-safe timestamped file logger; records `[INFO]` session events, `[SEND]` raw JSON requests, `[RECV]` raw JSON responses; appends across runs
 - CLI via argparse: subcommands `ping`, `exec`, `read`, `write`, `ls`, `env`
 - CLI flag `--local` → uses MockSSHTransport; otherwise requires `--host`
+- CLI flag `--log [PATH]` → enables session logging; auto-names file as `targetor_YYYYMMDDTHHmmSS.log` if no path given
 
 ### conftest.py
 - `agent_proc` fixture → raw `Popen` of agent.py (for wire-level tests in test_agent.py)
@@ -135,6 +137,10 @@ python client.py --local env
 # Remote via SSH
 python client.py --host 192.168.1.100 --user pi exec "uname -a"
 python client.py --host target --user user --key ~/.ssh/id_ed25519 read /etc/hostname
+
+# Session logging
+python client.py --local --log exec "uname -a"              # auto-named log file
+python client.py --host target --user user --log /tmp/session.log exec "ls /var/log"
 ```
 
 ---

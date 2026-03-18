@@ -5,6 +5,8 @@ import sys
 import os
 import threading
 import argparse
+import datetime
+import json
 
 # Ensure protocol and transport are importable when run directly
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -16,6 +18,36 @@ try:
     from queue import Queue, Empty
 except ImportError:
     from Queue import Queue, Empty  # Python 2 fallback (shouldn't be needed)
+
+
+class Logger:
+    """Timestamped file logger for recording protocol traffic and CLI steps."""
+
+    def __init__(self, path):
+        self._lock = threading.Lock()
+        self._f = open(path, "a", encoding="utf-8")
+        self.path = path
+        self._write("INFO", "=== session start ===")
+
+    def _write(self, level, message):
+        ts = datetime.datetime.now().isoformat(timespec="milliseconds")
+        line = f"[{ts}] [{level}] {message}\n"
+        with self._lock:
+            self._f.write(line)
+            self._f.flush()
+
+    def info(self, message):
+        self._write("INFO", message)
+
+    def request(self, msg):
+        self._write("SEND", json.dumps(msg))
+
+    def response(self, msg):
+        self._write("RECV", json.dumps(msg))
+
+    def close(self):
+        self._write("INFO", "=== session end ===")
+        self._f.close()
 
 
 class AgentError(Exception):
@@ -32,11 +64,12 @@ class AgentConnection:
     Thread-safe; a background reader thread routes responses by request ID.
     """
 
-    def __init__(self, transport: Transport):
+    def __init__(self, transport: Transport, logger: Logger = None):
         self._proc = transport.connect()
         self._queues = {}   # req_id -> Queue
         self._lock = threading.Lock()
         self._closed = False
+        self._logger = logger
         self._reader = threading.Thread(target=self._reader_loop, daemon=True)
         self._reader.start()
 
@@ -47,6 +80,8 @@ class AgentConnection:
                     msg = P.decode(line)
                 except ValueError:
                     continue
+                if self._logger:
+                    self._logger.response(msg)
                 req_id = msg.get("id")
                 with self._lock:
                     q = self._queues.get(req_id)
@@ -60,6 +95,8 @@ class AgentConnection:
                 q.put(None)
 
     def _send(self, msg):
+        if self._logger:
+            self._logger.request(msg)
         data = P.encode(msg)
         self._proc.stdin.write(data)
         self._proc.stdin.flush()
@@ -215,6 +252,8 @@ def build_parser():
                         help="Use local MockSSHTransport instead of real SSH")
     parser.add_argument("--timeout", type=float, default=30,
                         help="Request timeout in seconds")
+    parser.add_argument("--log", nargs="?", const="", metavar="PATH",
+                        help="Write timestamped log to PATH (auto-named if PATH omitted)")
 
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
     sub.required = True
@@ -255,6 +294,14 @@ def main():
     parser = build_parser()
     args = parser.parse_args()
 
+    # Set up logger if --log was given
+    logger = None
+    if args.log is not None:
+        log_path = args.log or datetime.datetime.now().strftime("targetor_%Y%m%dT%H%M%S.log")
+        logger = Logger(log_path)
+        logger.info(f"invocation: {' '.join(sys.argv)}")
+        print(f"logging to {logger.path}", file=sys.stderr)
+
     # Build transport
     if args.local:
         agent_path = args.agent_path if args.agent_path != "~/agent.py" else None
@@ -270,7 +317,7 @@ def main():
             agent_path=args.agent_path,
         )
 
-    with AgentConnection(transport) as conn:
+    with AgentConnection(transport, logger=logger) as conn:
         if args.command == "ping":
             import time
             t0 = time.time()
@@ -330,6 +377,9 @@ def main():
             info = conn.env_info()
             for k, v in info.items():
                 print(f"{k}: {v}")
+
+    if logger:
+        logger.close()
 
 
 if __name__ == "__main__":

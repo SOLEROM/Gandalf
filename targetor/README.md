@@ -95,6 +95,40 @@ python client.py --local env
 
 ---
 
+## Session Logging
+
+Add `--log` to any command to record a timestamped log of the full session:
+
+```bash
+# Auto-named file (e.g. targetor_20260318T142545.log)
+python client.py --local --log exec "uname -a"
+
+# Explicit path
+python client.py --host target --user user --log /tmp/session.log exec "journalctl -n 100"
+```
+
+The log file appends across runs. Each line is:
+```
+[<ISO-timestamp>] [<LEVEL>] <message>
+```
+
+| Level  | Content |
+|--------|---------|
+| `INFO` | Session start/end marker and the full CLI invocation |
+| `SEND` | Raw JSON request sent to the agent |
+| `RECV` | Raw JSON response from the agent (full payload including stdout/stderr) |
+
+Example:
+```
+[2026-03-18T14:25:45.672] [INFO] === session start ===
+[2026-03-18T14:25:45.672] [INFO] invocation: client.py --local --log exec uname -a
+[2026-03-18T14:25:45.672] [SEND] {"id": "2a58a...", "cmd": "exec", "payload": {"command": "uname -a", "stream": false}}
+[2026-03-18T14:25:45.696] [RECV] {"id": "2a58a...", "status": "ok", "payload": {"stdout": "Linux ...", "returncode": 0}}
+[2026-03-18T14:25:45.698] [INFO] === session end ===
+```
+
+---
+
 ## Running Tests
 
 ```bash
@@ -119,6 +153,8 @@ Global flags:
   --agent-path PATH    Path to agent.py on target (default: ~/agent.py)
   --local              Use local MockSSHTransport (no SSH)
   --timeout N          Request timeout in seconds (default: 30)
+  --log [PATH]         Write timestamped session log to PATH
+                       (auto-names file as targetor_YYYYMMDDTHHmmSS.log if PATH omitted)
 
 Commands:
   ping                           Ping the agent, show latency
