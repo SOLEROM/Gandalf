@@ -12,7 +12,7 @@ bun.lock
 *_pycache__/
 *.pyc
 
-
+.vscode/
 
 ##
 10_tools/*
