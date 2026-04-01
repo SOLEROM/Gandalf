@@ -23,7 +23,7 @@ My custom assistant for LLM agents development and management based on public to
 ## submodules:
 * my skill or public skills are clone here by submodels
 ```
-git submodule add  https://github.com/SOLEROM/skill_mdRefactor 12_mds/skill_mdRefactor
+git submodule add  https://github.com/SOLEROM/skill_XXXXX 11_mySubsSkills/skill_XXXX
 ```
 
 ## deployment:

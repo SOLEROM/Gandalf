@@ -1,3 +1,6 @@
 [submodule "11_mySubsSkills/skill_mdRefactor"]
 	path = 11_mySubsSkills/skill_mdRefactor
 	url = https://github.com/SOLEROM/skill_mdRefactor
+[submodule "11_mySubsSkills/skill_ccpan"]
+	path = 11_mySubsSkills/skill_ccpan
+	url = https://github.com/SOLEROM/agent_ccpanBuilder.git
