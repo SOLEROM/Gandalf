@@ -1,5 +1,10 @@
 #!/bin/bash
-mkdir -p ~/.claude/skills/ ~/.claude/agents
+mkdir -p ~/.claude/skills/ ~/.claude/agents ~/.claude/help ~/.claude/commands
+
+## help
+cp -ar 00_help/* ~/.claude/help/
+cp -ar 06_cmds/* ~/.claude/commands
+
 
 ## mdTree
 mkdir -p ~/.claude/skills/mdTree
