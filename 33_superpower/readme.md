@@ -1,0 +1,3 @@
+# superpower plugin skills
+
+https://github.com/obra/superpowers/tree/main/skills

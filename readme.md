@@ -18,3 +18,16 @@ My custom assistant for LLM agents development and management based on public to
 ```4 ganMaster``` :  skill to implement *GOF* patterns;
 
 ```10 tools``` : local clones of *public tools*
+
+
+## submodules:
+* my skill or public skills are clone here by submodels
+```
+git submodule add  https://github.com/SOLEROM/skill_mdRefactor 12_mds/skill_mdRefactor
+```
+
+## deployment:
+
+* run ```deploy.sh``` script that will updare ~/.cluade (only the needed files)
+
+
