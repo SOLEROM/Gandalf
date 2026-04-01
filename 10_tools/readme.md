@@ -1,5 +1,8 @@
 # public tools
 
+## status line usage
+* https://github.com/Orellius/claudeusage-mcp
+
 ## get-shit-done
 
 ```
