@@ -4,3 +4,6 @@
 [submodule "11_mySubsSkills/skill_ccpan"]
 	path = 11_mySubsSkills/skill_ccpan
 	url = https://github.com/SOLEROM/agent_ccpanBuilder.git
+[submodule "11_mySubsSkills/skill_gangPatterns"]
+	path = 11_mySubsSkills/skill_gangPatterns
+	url = https://github.com/SOLEROM/skill_gangPatterns

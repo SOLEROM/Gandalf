@@ -5,19 +5,20 @@ My custom assistant for LLM agents development and management based on public to
 
 ## Tools Map
 
-```0 claude settings``` : *GLOBAL* setting config files
+```
 
-```2 scope``` : codebase scanning ;
-* socraticode - ollama + qdrant for codebase indexing and semantic search;
-
-```1 claude top mds``` : top level markdown files *TEMPLATES*
+06.cmds  - custom commands added globaly
+                /hh             - build install map of all tolls;
 
 
-```3 agentTeam``` :  skill to build *A-TEAM* of agents to implement a project from a markdown plan;
+11. mySubSkill
+                ccpan           - create web tui
+                mdRefactor      - rearange md km folders
 
-```4 ganMaster``` :  skill to implement *GOF* patterns;
 
-```10 tools``` : local clones of *public tools*
+```
+
+
 
 
 ## submodules:
