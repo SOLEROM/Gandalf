@@ -7,3 +7,6 @@
 [submodule "11_mySubsSkills/skill_gangPatterns"]
 	path = 11_mySubsSkills/skill_gangPatterns
 	url = https://github.com/SOLEROM/skill_gangPatterns
+[submodule "12_sshs/targetor"]
+	path = 12_sshs/targetor
+	url = https://github.com/SOLEROM/agent_Targetor
