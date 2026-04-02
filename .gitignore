@@ -13,6 +13,7 @@ bun.lock
 *.pyc
 
 .vscode/
+.claude/
 
 ##
 10_tools/*
