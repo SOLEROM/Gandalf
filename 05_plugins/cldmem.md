@@ -11,3 +11,5 @@ persistent memory across sessions
 /plugin install claude-mem
 
 ```
+
+? http://localhost:37777/
