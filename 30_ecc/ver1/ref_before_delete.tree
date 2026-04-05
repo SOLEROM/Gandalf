@@ -1,0 +1,290 @@
+ref_claude
+├── agents
+│   ├── architect.md
+│   ├── build-error-resolver.md
+│   ├── chief-of-staff.md
+│   ├── code-reviewer.md
+│   ├── cpp-build-resolver.md
+│   ├── cpp-reviewer.md
+│   ├── database-reviewer.md
+│   ├── docs-lookup.md
+│   ├── doc-updater.md
+│   ├── e2e-runner.md
+│   ├── flutter-reviewer.md
+│   ├── go-build-resolver.md
+│   ├── go-reviewer.md
+│   ├── harness-optimizer.md
+│   ├── java-build-resolver.md
+│   ├── java-reviewer.md
+│   ├── kotlin-build-resolver.md
+│   ├── kotlin-reviewer.md
+│   ├── loop-operator.md
+│   ├── planner.md
+│   ├── python-reviewer.md
+│   ├── pytorch-build-resolver.md
+│   ├── refactor-cleaner.md
+│   ├── rust-build-resolver.md
+│   ├── rust-reviewer.md
+│   ├── security-reviewer.md
+│   ├── tdd-guide.md
+│   └── typescript-reviewer.md
+├── commands
+│   ├── aside.md
+│   ├── build-fix.md
+│   ├── checkpoint.md
+│   ├── claw.md
+│   ├── code-review.md
+│   ├── context-budget.md
+│   ├── cpp-build.md
+│   ├── cpp-review.md
+│   ├── cpp-test.md
+│   ├── devfleet.md
+│   ├── docs.md
+│   ├── e2e.md
+│   ├── eval.md
+│   ├── evolve.md
+│   ├── go-build.md
+│   ├── go-review.md
+│   ├── go-test.md
+│   ├── gradle-build.md
+│   ├── harness-audit.md
+│   ├── instinct-export.md
+│   ├── instinct-import.md
+│   ├── instinct-status.md
+│   ├── kotlin-build.md
+│   ├── kotlin-review.md
+│   ├── kotlin-test.md
+│   ├── learn-eval.md
+│   ├── learn.md
+│   ├── loop-start.md
+│   ├── loop-status.md
+│   ├── model-route.md
+│   ├── multi-backend.md
+│   ├── multi-execute.md
+│   ├── multi-frontend.md
+│   ├── multi-plan.md
+│   ├── multi-workflow.md
+│   ├── orchestrate.md
+│   ├── plan.md
+│   ├── pm2.md
+│   ├── projects.md
+│   ├── promote.md
+│   ├── prompt-optimize.md
+│   ├── prune.md
+│   ├── python-review.md
+│   ├── quality-gate.md
+│   ├── refactor-clean.md
+│   ├── resume-session.md
+│   ├── rules-distill.md
+│   ├── rust-build.md
+│   ├── rust-review.md
+│   ├── rust-test.md
+│   ├── save-session.md
+│   ├── sessions.md
+│   ├── setup-pm.md
+│   ├── skill-create.md
+│   ├── skill-health.md
+│   ├── tdd.md
+│   ├── test-coverage.md
+│   ├── update-codemaps.md
+│   ├── update-docs.md
+│   └── verify.md
+├── hooks
+│   ├── hooks.json
+│   └── README.md
+├── mcp-configs
+│   └── mcp-servers.json
+├── rules
+│   ├── common
+│   │   ├── agents.md
+│   │   ├── coding-style.md
+│   │   ├── development-workflow.md
+│   │   ├── git-workflow.md
+│   │   ├── hooks.md
+│   │   ├── patterns.md
+│   │   ├── performance.md
+│   │   ├── security.md
+│   │   └── testing.md
+│   ├── cpp
+│   │   ├── coding-style.md
+│   │   ├── hooks.md
+│   │   ├── patterns.md
+│   │   ├── security.md
+│   │   └── testing.md
+│   ├── csharp
+│   │   ├── coding-style.md
+│   │   ├── hooks.md
+│   │   ├── patterns.md
+│   │   ├── security.md
+│   │   └── testing.md
+│   ├── golang
+│   │   ├── coding-style.md
+│   │   ├── hooks.md
+│   │   ├── patterns.md
+│   │   ├── security.md
+│   │   └── testing.md
+│   ├── java
+│   │   ├── coding-style.md
+│   │   ├── hooks.md
+│   │   ├── patterns.md
+│   │   ├── security.md
+│   │   └── testing.md
+│   ├── kotlin
+│   │   ├── coding-style.md
+│   │   ├── hooks.md
+│   │   ├── patterns.md
+│   │   ├── security.md
+│   │   └── testing.md
+│   ├── perl
+│   │   ├── coding-style.md
+│   │   ├── hooks.md
+│   │   ├── patterns.md
+│   │   ├── security.md
+│   │   └── testing.md
+│   ├── php
+│   │   ├── coding-style.md
+│   │   ├── hooks.md
+│   │   ├── patterns.md
+│   │   ├── security.md
+│   │   └── testing.md
+│   ├── python
+│   │   ├── coding-style.md
+│   │   ├── hooks.md
+│   │   ├── patterns.md
+│   │   ├── security.md
+│   │   └── testing.md
+│   ├── README.md
+│   ├── rust
+│   │   ├── coding-style.md
+│   │   ├── hooks.md
+│   │   ├── patterns.md
+│   │   ├── security.md
+│   │   └── testing.md
+│   ├── swift
+│   │   ├── coding-style.md
+│   │   ├── hooks.md
+│   │   ├── patterns.md
+│   │   ├── security.md
+│   │   └── testing.md
+│   └── typescript
+│       ├── coding-style.md
+│       ├── hooks.md
+│       ├── patterns.md
+│       ├── security.md
+│       └── testing.md
+└── skills
+    ├── ai-regression-testing
+    │   └── SKILL.md
+    ├── android-clean-architecture
+    │   └── SKILL.md
+    ├── api-design
+    │   └── SKILL.md
+    ├── backend-patterns
+    │   └── SKILL.md
+    ├── coding-standards
+    │   └── SKILL.md
+    ├── compose-multiplatform-patterns
+    │   └── SKILL.md
+    ├── configure-ecc
+    │   └── SKILL.md
+    ├── continuous-learning
+    │   ├── config.json
+    │   ├── evaluate-session.sh
+    │   └── SKILL.md
+    ├── continuous-learning-v2
+    │   ├── agents
+    │   │   ├── observer-loop.sh
+    │   │   ├── observer.md
+    │   │   ├── session-guardian.sh
+    │   │   └── start-observer.sh
+    │   ├── config.json
+    │   ├── hooks
+    │   │   └── observe.sh
+    │   ├── scripts
+    │   │   ├── detect-project.sh
+    │   │   ├── instinct-cli.py
+    │   │   └── test_parse_instinct.py
+    │   └── SKILL.md
+    ├── cpp-coding-standards
+    │   └── SKILL.md
+    ├── cpp-testing
+    │   └── SKILL.md
+    ├── django-patterns
+    │   └── SKILL.md
+    ├── django-tdd
+    │   └── SKILL.md
+    ├── django-verification
+    │   └── SKILL.md
+    ├── e2e-testing
+    │   └── SKILL.md
+    ├── eval-harness
+    │   └── SKILL.md
+    ├── frontend-patterns
+    │   └── SKILL.md
+    ├── frontend-slides
+    │   ├── SKILL.md
+    │   └── STYLE_PRESETS.md
+    ├── golang-patterns
+    │   └── SKILL.md
+    ├── golang-testing
+    │   └── SKILL.md
+    ├── iterative-retrieval
+    │   └── SKILL.md
+    ├── java-coding-standards
+    │   └── SKILL.md
+    ├── kotlin-coroutines-flows
+    │   └── SKILL.md
+    ├── kotlin-exposed-patterns
+    │   └── SKILL.md
+    ├── kotlin-ktor-patterns
+    │   └── SKILL.md
+    ├── kotlin-patterns
+    │   └── SKILL.md
+    ├── kotlin-testing
+    │   └── SKILL.md
+    ├── laravel-patterns
+    │   └── SKILL.md
+    ├── laravel-tdd
+    │   └── SKILL.md
+    ├── laravel-verification
+    │   └── SKILL.md
+    ├── learned
+    ├── mcp-server-patterns
+    │   └── SKILL.md
+    ├── perl-patterns
+    │   └── SKILL.md
+    ├── perl-testing
+    │   └── SKILL.md
+    ├── plankton-code-quality
+    │   └── SKILL.md
+    ├── project-guidelines-example
+    │   └── SKILL.md
+    ├── python-patterns
+    │   └── SKILL.md
+    ├── python-testing
+    │   └── SKILL.md
+    ├── rust-patterns
+    │   └── SKILL.md
+    ├── rust-testing
+    │   └── SKILL.md
+    ├── skill-stocktake
+    │   ├── scripts
+    │   │   ├── quick-diff.sh
+    │   │   ├── save-results.sh
+    │   │   └── scan.sh
+    │   └── SKILL.md
+    ├── springboot-patterns
+    │   └── SKILL.md
+    ├── springboot-tdd
+    │   └── SKILL.md
+    ├── springboot-verification
+    │   └── SKILL.md
+    ├── strategic-compact
+    │   ├── SKILL.md
+    │   └── suggest-compact.sh
+    ├── tdd-workflow
+    │   └── SKILL.md
+    └── verification-loop
+        └── SKILL.md
+
+69 directories, 218 files
