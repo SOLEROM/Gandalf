@@ -70,7 +70,67 @@ Apply this filter to each category:
 - Named for a specific platform (e.g. `android-clean-architecture`, `compose-multiplatform-patterns`)
 - A presentation or slide template with no workflow function
 
-### 3. Delete the excluded files
+### 3. Write the test infrastructure
+
+Create a `test/` directory at the repo root with two files:
+
+#### `test/test.md` — human-readable scenario document
+
+Write a scenario that exercises every kept skill end-to-end. Structure:
+- **Context block** — a realistic dev situation (feature branch, staging URL, a written plan). Make it concrete enough that every skill has something to act on.
+- **One section per skill** (in dependency order: plan → browse/QA → review → ship → retro). Each section contains:
+  - Skill name and purpose (one line)
+  - The exact prompt a developer would type to Claude
+  - What Claude does (bullet list of actions)
+  - Expected output shape (template showing section headings and key content)
+- **Running the demo** section — install instructions, how to start a Claude Code session, skill-name → trigger-phrase reference table.
+
+#### `test/test.sh` — unattended test runner
+
+Write a bash script that runs every skill using `claude --print --dangerously-skip-permissions` (non-interactive mode) and validates output. Requirements:
+
+**Structure:**
+- Color helpers (`green`, `red`, `yellow`, `bold`, `dim`)
+- `--help` / `-h` flag: lists every testable skill with its step number and one-line description, plus `VERBOSE` / `TIMEOUT` / `-d` options
+- `-d` / `--debug` flag: prints workdir, full command, and full prompt before each run (for diagnosing stuck tests)
+- `VERBOSE=1` env var: prints full Claude output on failure
+- `TIMEOUT` env var: per-skill timeout in seconds (default 120)
+- Positional args as skill filter: `bash test/test.sh browse review` runs only those two
+
+**Non-interactive preamble:**
+Prepend this block to every prompt before sending to `claude --print`:
+```
+IMPORTANT: You are running in non-interactive automated test mode.
+- Do NOT call AskUserQuestion under any circumstances.
+- Make all decisions autonomously without asking for confirmation.
+- When a skill offers mode options, choose SMALL CHANGE / quick mode automatically.
+- Produce the output as if the user had already answered all questions.
+```
+This prevents skills that call `AskUserQuestion` from blocking indefinitely.
+
+**Test isolation:**
+Create a temp git repo (`mktemp -d`, cleaned up on EXIT) with a realistic structure:
+- `README.md`, `VERSION` (e.g. `1.0.0`), `CHANGELOG.md`
+- At least one source file with a simulated feature-branch commit on top of an initial commit
+Run each skill's claude invocation from inside this temp repo so skills that read `git log`, `git diff`, or filesystem state have something real to work with.
+
+**Per-skill validation:**
+For each skill, define a regex pattern of expected keywords. After `claude --print` returns, check `grep -qiE "$pattern"` on the output. Mark PASS / FAIL / SKIP accordingly.
+
+**Report file (`./testReport.log`):**
+- Truncate and re-create on every run (never append across runs)
+- Write a timestamped header at the start
+- After each skill: write a section with skill name, status, and full Claude output
+- After all skills: write a SUMMARY block with per-skill PASS/FAIL/SKIP lines and totals
+- Print `Report written to ./testReport.log` at end of terminal output
+
+**Exit code:** exit 1 if any skill failed; exit 0 if all passed or only skipped.
+
+**Platform handling:** skip `setup-browser-cookies` (or any macOS-only skill) automatically on Linux.
+
+**Auto-install:** if skills are not yet present at `~/.claude/skills/<name>/SKILL.md`, run `install.sh` before the first test.
+
+### 4. Delete the excluded files
 
 Use `rm -f` for individual files, `rm -rf` for directories.
 
@@ -80,7 +140,7 @@ Use `rm -f` for individual files, `rm -rf` for directories.
 
 **`usage.md`** — best-practice guide organized by dev workflow phase: before coding, writing code, before commit, post-merge, testing, orchestration, session management, learning, documentation. For each tool: when to use it, exact invocation syntax, notable behaviors, anti-patterns to avoid. End with a quick-reference situation→tool table.
 
-**`install.md`** — step-by-step installation into a running Claude Code instance. Cover each asset type:
+**`install.md`** — step-by-step installation into a running Claude Code instance. Cover each asset type. End with a "Verify the installation" section that tells the reader to run `bash test/test.sh` after installing — and what a passing run looks like. Cover each asset type:
 - Agents: `cp *.md ~/.claude/agents/`
 - Commands: `cp *.md ~/.claude/commands/`
 - Skills: `cp -r <dir> ~/.claude/skills/` for each skill directory; `chmod +x` any shell scripts
@@ -105,7 +165,7 @@ Include a clean/no-issue list for everything that passed review, and a quick-dis
 
 ## Output
 
-A cleaned directory with only general-purpose assets plus five documentation files at the root:
+A cleaned directory with only general-purpose assets, five documentation files at the root, and a test suite:
 
 ```
 README.md      — what's here and why
@@ -113,7 +173,12 @@ usage.md       — when and how to use each tool
 install.md     — how to install into Claude Code
 security.md    — security review of all executable scripts
 CURATION.md    — full log of what was kept and removed
+test/
+  test.md      — human-readable scenario exercising every skill end-to-end
+  test.sh      — unattended runner: claude --print per skill, validates output, writes testReport.log
 ```
+
+`test/test.sh` is the verification step for anyone installing the toolkit: run it after `install.sh` to confirm every skill loads and produces expected output in non-interactive mode.
 
 ---
 
