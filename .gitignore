@@ -14,8 +14,10 @@ bun.lock
 
 .vscode/
 .claude/
+.codex/
 
 ##
 10_tools/*
 !10_tools/clones.sh
 !10_tools/readme.md
+.gstack/
