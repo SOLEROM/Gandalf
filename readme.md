@@ -2,6 +2,7 @@
 
 My custom assistant for LLM agents development and management based on public tools and templates, with a focus on Anthropic's Claude.
 
+* [usage](./usage.md)
 
 ## Tools Map
 

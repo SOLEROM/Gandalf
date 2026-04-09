@@ -2,6 +2,8 @@
 
 A Claude Code skill for building projects using [Agent Teams](https://www.anthropic.com/news/claude-opus-4-6) — Anthropic's multi-agent collaboration feature where multiple Claude instances work in parallel, communicate with each other, and coordinate autonomously. Give it a plan document describing what you want to build, and it spawns a team of specialized agents in tmux split panes to build it together.
 
+* ref: https://code.claude.com/docs/en/agent-teams
+
 Once set up, it's as simple as:
 
 ```bash
