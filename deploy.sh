@@ -6,13 +6,10 @@ set -euo pipefail
 # FUNCTIONS
 ################################################################################
 
-## deps
-
-
 fresh_install() {
     echo "Performing fresh install..."
 
-    ## mkdris
+    ## mkdirs
     mkdir -p ~/.claude/skills ~/.claude/agents ~/.claude/help ~/.claude/commands
 
     ## set settings
@@ -29,9 +26,6 @@ fresh_install() {
         npm install && npm run build
     )
     claude mcp add claudeusage -- node $(pwd)/dist/index.js
-
-
-
 
     echo "Finished fresh install"
     update_skills
@@ -69,17 +63,15 @@ update_skills() {
     cp -ar 21_agentTeam/* ~/.claude/skills/agentTeam/
     echo "...skill_agentTeam deployed"
 
-
     echo "Finished updating skills"
 }
 
 install_agents() {
     echo "Installing agents..."
- 
+
     ## ateam
     cd ./21_agentTeam && ./install.sh
- 
- 
+
     echo "Finished installing agents"
 }
 
@@ -95,10 +87,47 @@ install_agents() {
 # ## 34 TenLesonRepo
 # ./34_cldTenLesRepo/ver1/install.sh
 
+################################################################################
+# FLAGS
+################################################################################
 
+# Early-exit help pass (before any state changes)
+for arg in "$@"; do
+  case "$arg" in
+    --help|-h)
+      echo "Usage: bash deploy.sh [options]"
+      echo ""
+      echo "Options:"
+      echo "  --install    Fresh install (clone MCP plugin, copy settings, skills, agents)"
+      echo "  --update     Update skills only (no MCP or settings changes)"
+      echo "  --help, -h   Show this help"
+      echo ""
+      echo "No options: show interactive menu"
+      exit 0
+      ;;
+  esac
+done
+
+# Unattended mode: parse action flags
+HAS_FLAGS=false
+DO_INSTALL=false
+DO_UPDATE=false
+
+for arg in "$@"; do
+  case "$arg" in
+    --install) DO_INSTALL=true; HAS_FLAGS=true ;;
+    --update)  DO_UPDATE=true;  HAS_FLAGS=true ;;
+  esac
+done
+
+if [[ "$HAS_FLAGS" == "true" ]]; then
+    [[ "$DO_INSTALL" == "true" ]] && fresh_install
+    [[ "$DO_UPDATE"  == "true" ]] && update_skills
+    exit 0
+fi
 
 ################################################################################
-# MENU
+# MENU (no flags given)
 ################################################################################
 
 echo "What do you want to do?"
