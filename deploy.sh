@@ -77,11 +77,8 @@ install_agents() {
 
 # ## 30 ecc
 # ./30_ecc/install.sh --mcp
-# ## 32 gstack
-# sudo apt-get install unzip
-# curl -fsSL https://bun.sh/install | bash
-# cd ~.claude/skills/browse && bun x playwright install chromium
-# ./32_gstack/ver1/install.sh
+
+
 # ## 33 superpower
 # ./33_superpower/ver1/install.sh
 # ## 34 TenLesonRepo

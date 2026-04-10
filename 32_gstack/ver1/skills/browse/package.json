@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "diff": "^8.0.4",
-    "playwright": "^1.59.1"
-  }
-}

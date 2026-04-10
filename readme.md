@@ -21,8 +21,8 @@ My custom assistant for LLM agents development and management based on public to
 
 ### 02_Plugs
 * [ecc](./30_ecc/readme.md) 
-* [skillKits](./31_skillKit/readme.md)
-* [gstack](./32_gstack/readme.md)
+* [skillKits] - TBD
+* [gstack]- TBD
 * [superpowers](./33_superpower/readme.md)
 * [cldTenLesRepo](./34_cldTenLesRepo/readme.md)
 * [prp-EngContext](./35_conPnP/readme.md)
