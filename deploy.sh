@@ -75,15 +75,6 @@ install_agents() {
     echo "Finished installing agents"
 }
 
-# ## 30 ecc
-# ./30_ecc/install.sh --mcp
-
-
-# ## 33 superpower
-# ./33_superpower/ver1/install.sh
-# ## 34 TenLesonRepo
-# ./34_cldTenLesRepo/ver1/install.sh
-
 ################################################################################
 # FLAGS
 ################################################################################
