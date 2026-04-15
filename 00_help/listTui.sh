@@ -7,6 +7,41 @@
 #   eccTui.sh --global     Scan ~/.claude
 #   eccTui.sh --md         Markdown output  (combine with --local / --global)
 
+# zsh compatibility: suppress NOMATCH errors when globs have no results,
+# and enable SH_WORD_SPLIT so unquoted $var behaves like bash word splitting.
+if [[ -n "${ZSH_VERSION:-}" ]]; then
+    setopt NO_NOMATCH SH_WORD_SPLIT 2>/dev/null || true
+fi
+
+# ── portable helpers ─────────────────────────────────────────────────────────
+
+# Repeat a character N times without glob-prone $(seq) expansion
+repeat_char() {   # $1=char  $2=count
+    local s="" i=0
+    while (( i++ < $2 )); do s+="$1"; done
+    printf '%s' "$s"
+}
+
+# find wrappers that skip hidden directories (name starts with '.') unless --hidden is set.
+# Uses -prune so the root dir itself is never excluded, even if its path contains a dot segment.
+find_files() {    # $1=dir  $2=name-pattern  [extra find args passed before expression]
+    local dir="$1" pattern="$2"; shift 2
+    if [[ "$SEARCH_HIDDEN" == true ]]; then
+        find "$dir" "$@" -name "$pattern"
+    else
+        find "$dir" "$@" \( -name '.*' -prune \) -o \( -name "$pattern" -print \)
+    fi
+}
+
+find_dirs() {     # $1=dir  [extra find args passed before expression]
+    local dir="$1"; shift
+    if [[ "$SEARCH_HIDDEN" == true ]]; then
+        find "$dir" "$@" -type d
+    else
+        find "$dir" "$@" \( -name '.*' -prune \) -o \( -type d -print \)
+    fi
+}
+
 # ── colours (terminal mode only) ─────────────────────────────────────────────
 BOLD='\033[1m'
 DIM='\033[2m'
@@ -22,21 +57,40 @@ RESET='\033[0m'
 SHOW_LOCAL=false
 SHOW_GLOBAL=false
 OUTPUT_MODE="term"
+SEARCH_HIDDEN=false
 
 for arg in "$@"; do
     case "$arg" in
         --local)  SHOW_LOCAL=true  ;;
         --global) SHOW_GLOBAL=true ;;
         --md)     OUTPUT_MODE="md" ;;
+        --hidden) SEARCH_HIDDEN=true ;;
         -h|--help)
-            echo "Usage: $(basename "$0") [--local] [--global] [--md]"
+            local_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+            global_root="$HOME/.claude"
+            echo "Usage: $(basename "$0") [--local] [--global] [--md] [--hidden]"
+            echo
             echo "  --local   scan current project directory"
-            echo "  --global  scan ~/.claude"
+            printf "            %-12s %s\n" "AGENTS.md:"  "$local_root/AGENTS.md"
+            printf "            %-12s %s\n" "agents/:"    "$local_root/agents/"
+            printf "            %-12s %s\n" "skills/:"    "$local_root/skills/"
+            printf "            %-12s %s\n" "commands/:"  "$local_root/commands/"
+            printf "            %-12s %s\n" "rules/:"     "$local_root/rules/"
+            echo
+            echo "  --global  scan ~/.claude and all installed plugins"
+            printf "            %-12s %s\n" "agents/:"    "$global_root/agents/"
+            printf "            %-12s %s\n" "skills/:"    "$global_root/skills/"
+            printf "            %-12s %s\n" "commands/:"  "$global_root/commands/"
+            printf "            %-12s %s\n" "rules/:"     "$global_root/rules/"
+            printf "            %-12s %s\n" "plugins/:"   "$global_root/plugins/  (each subdir scanned)"
+            echo
             echo "  --md      output as markdown instead of terminal colours"
+            echo "  --hidden  include hidden directories (starting with .) in search"
+            echo "            (default: hidden directories are skipped)"
             echo "  (no scope flag) defaults to --global"
             exit 0
             ;;
-        *) echo "Unknown flag: $arg  (use --local, --global, --md, or --help)"; exit 1 ;;
+        *) echo "Unknown flag: $arg  (use --local, --global, --md, --hidden, or --help)"; exit 1 ;;
     esac
 done
 
@@ -66,7 +120,7 @@ out_section_header() {  # $1 = title  $2 = colour (term only)
         echo
     else
         local line
-        line=$(printf '─%.0s' $(seq 1 72))
+        line=$(repeat_char '─' 72)
         echo
         echo -e "${2}${BOLD}┌${line}┐${RESET}"
         printf "${2}${BOLD}│  %-70s│${RESET}\n" "$1"
@@ -110,8 +164,18 @@ yaml_field() {          # $1=file  $2=field
         /^---/ { if (NR > 1) exit }
         $0 ~ "^" f ":" {
             sub("^" f ":[ \t]*", "")
-            gsub(/^[">|'\''[:space:]]+|['\''[:space:]]+$/, "")
-            print; exit
+            gsub(/^[">[:space:]]+|[[:space:]]+$/, "")
+            if ($0 == "|" || $0 == ">") {
+                # block scalar — capture first non-empty indented line
+                while ((getline line) > 0) {
+                    if (line !~ /^[ \t]/) break
+                    gsub(/^[ \t]+/, "", line)
+                    if (line != "") { print line; exit }
+                }
+            } else {
+                gsub(/^['\'']+|['\'']+$/, "")
+                print; exit
+            }
         }
     ' "$file"
 }
@@ -170,7 +234,7 @@ print_agents_from_table() {     # $1 = AGENTS.md path
             if [[ "$line" == *"| Agent | Purpose | When to Use |"* ]]; then
                 in_table=1
                 printf "  ${BOLD}%-32s %-30s %s${RESET}\n" "AGENT" "PURPOSE" "WHEN TO USE"
-                echo -e "  ${DIM}$(printf '─%.0s' $(seq 1 70))${RESET}"
+                echo -e "  ${DIM}$(repeat_char '─' 70)${RESET}"
                 continue
             fi
             if (( in_table )) && [[ "$line" == \|* ]]; then
@@ -202,28 +266,33 @@ print_agents_from_dir() {       # $1 = agents/ dir
         echo "|-------|-------------|"
         while IFS= read -r file; do
             [[ -f "$file" ]] || continue
+            # Skip files without YAML frontmatter (not agent definitions)
+            head -1 "$file" 2>/dev/null | grep -q '^---' || continue
             local name desc
-            name=$(basename "$file" .md)
+            name="${file#$dir/}"
+            name="${name%.md}"
             desc=$(yaml_field "$file" "description")
             [[ -z "$desc" ]] && desc=$(yaml_field "$file" "name")
             [[ -z "$desc" ]] && desc="${name//-/ }"
             echo "| **$name** | $desc |"
             (( count++ ))
-        done < <(find "$dir" -maxdepth 1 -name '*.md' | sort)
+        done < <(find_files "$dir" '*.md' | sort)
     else
         printf "  ${BOLD}%-32s %s${RESET}\n" "AGENT" "DESCRIPTION"
-        echo -e "  ${DIM}$(printf '─%.0s' $(seq 1 70))${RESET}"
+        echo -e "  ${DIM}$(repeat_char '─' 70)${RESET}"
         while IFS= read -r file; do
             [[ -f "$file" ]] || continue
+            head -1 "$file" 2>/dev/null | grep -q '^---' || continue
             local name desc
-            name=$(basename "$file" .md)
+            name="${file#$dir/}"
+            name="${name%.md}"
             desc=$(yaml_field "$file" "description")
             [[ -z "$desc" ]] && desc=$(yaml_field "$file" "name")
             [[ -z "$desc" ]] && desc="${name//-/ }"
             echo -e "  ${CYAN}${name}${RESET}"
             echo -e "    ${DIM}${desc}${RESET}"
             (( count++ ))
-        done < <(find "$dir" -maxdepth 1 -name '*.md' | sort)
+        done < <(find_files "$dir" '*.md' | sort)
     fi
     out_total "$count" "agents"
 }
@@ -241,22 +310,19 @@ print_skills() {                # $1 = skills/ dir
     local tmp
     tmp=$(mktemp)
 
-    while IFS= read -r skill_path; do
-        [[ -d "$skill_path" ]] || continue
-        local name description
-        name=$(basename "$skill_path")
-        description=""
-        local skill_file="$skill_path/SKILL.md"
-        if [[ -f "$skill_file" ]]; then
-            description=$(yaml_field "$skill_file" "description")
-            [[ -z "$description" ]] && description=$(grep -m1 '^# ' "$skill_file" | sed 's/^# //')
-        fi
-        [[ -z "$description" ]] && description="${name//-/ }"
+    while IFS= read -r skill_file; do
+        local skill_path name leaf description
+        skill_path=$(dirname "$skill_file")
+        name="${skill_path#$dir/}"   # relative path from skills/
+        leaf=$(basename "$skill_path")
+        description=$(yaml_field "$skill_file" "description")
+        [[ -z "$description" ]] && description=$(awk 'BEGIN{n=0} /^---/{n++;next} n>=2 && /^# /{sub(/^# /,"");print;exit}' "$skill_file")
+        [[ -z "$description" ]] && description="${leaf//-/ }"
         local category
-        category=$(skill_category "${name,,}")
+        category=$(skill_category "${leaf,,}")
         printf '%s\t%s\t%s\n' "$category" "$name" "$description" >> "$tmp"
         (( count++ ))
-    done < <(find "$dir" -mindepth 1 -maxdepth 1 -type d | sort)
+    done < <(find_files "$dir" 'SKILL.md' | sort)
 
     local prev_cat=""
     while IFS=$'\t' read -r cat name desc; do
@@ -295,27 +361,29 @@ print_commands() {              # $1 = commands/ dir
         while IFS= read -r file; do
             [[ -f "$file" ]] || continue
             local cmd description
-            cmd=$(basename "$file" .md)
+            cmd="${file#$dir/}"
+            cmd="${cmd%.md}"
             description=$(yaml_field "$file" "description")
-            [[ -z "$description" ]] && description=$(grep -m1 '^# ' "$file" | sed 's/^# //')
+            [[ -z "$description" ]] && description=$(awk 'BEGIN{n=0} /^---/{n++;next} n>=2 && /^# /{sub(/^# /,"");print;exit}' "$file")
             [[ -z "$description" ]] && description="${cmd//-/ }"
             echo "| \`/$cmd\` | $description |"
             (( count++ ))
-        done < <(find "$dir" -maxdepth 1 -name '*.md' | sort)
+        done < <(find_files "$dir" '*.md' | sort)
     else
         printf "  ${BOLD}%-30s %s${RESET}\n" "COMMAND" "DESCRIPTION"
-        echo -e "  ${DIM}$(printf '─%.0s' $(seq 1 70))${RESET}"
+        echo -e "  ${DIM}$(repeat_char '─' 70)${RESET}"
         while IFS= read -r file; do
             [[ -f "$file" ]] || continue
             local cmd description
-            cmd=$(basename "$file" .md)
+            cmd="${file#$dir/}"
+            cmd="${cmd%.md}"
             description=$(yaml_field "$file" "description")
-            [[ -z "$description" ]] && description=$(grep -m1 '^# ' "$file" | sed 's/^# //')
+            [[ -z "$description" ]] && description=$(awk 'BEGIN{n=0} /^---/{n++;next} n>=2 && /^# /{sub(/^# /,"");print;exit}' "$file")
             [[ -z "$description" ]] && description="${cmd//-/ }"
             echo -e "  ${YELLOW}/${cmd}${RESET}"
             echo -e "    ${DIM}${description}${RESET}"
             (( count++ ))
-        done < <(find "$dir" -maxdepth 1 -name '*.md' | sort)
+        done < <(find_files "$dir" '*.md' | sort)
     fi
     out_total "$count" "commands"
 }
@@ -330,25 +398,113 @@ print_rules() {                 # $1 = rules/ dir
     fi
 
     local count=0
-    while IFS= read -r lang_dir; do
-        [[ -d "$lang_dir" ]] || continue
-        local lang
-        lang=$(basename "$lang_dir")
-        out_subsection "${lang^}"
-        while IFS= read -r file; do
-            [[ -f "$file" ]] || continue
-            local rulename
-            rulename=$(basename "$file" .md)
-            if [[ $OUTPUT_MODE == md ]]; then
-                echo "- $rulename"
-            else
-                printf "  ${MAGENTA}%s${RESET}\n" "$rulename"
-            fi
-            (( count++ ))
-        done < <(find "$lang_dir" -maxdepth 1 -name '*.md' | sort)
-        [[ $OUTPUT_MODE == md ]] && echo
-    done < <(find "$dir" -mindepth 1 -maxdepth 1 -type d | sort)
+    local tmp
+    tmp=$(mktemp)
+    while IFS= read -r file; do
+        local relpath group rulename
+        relpath="${file#$dir/}"
+        group=$(echo "$relpath" | cut -d'/' -f1)
+        rulename="${relpath%.md}"
+        printf '%s\t%s\n' "$group" "$rulename" >> "$tmp"
+        (( count++ ))
+    done < <(find "$dir" -name '*.md' | sort)
+
+    local prev_group=""
+    while IFS=$'\t' read -r group rulename; do
+        if [[ "$group" != "$prev_group" ]]; then
+            [[ $OUTPUT_MODE == md && -n "$prev_group" ]] && echo
+            out_subsection "${group^}"
+            prev_group="$group"
+        fi
+        if [[ $OUTPUT_MODE == md ]]; then
+            echo "- $rulename"
+        else
+            printf "  ${MAGENTA}%s${RESET}\n" "$rulename"
+        fi
+    done < <(sort "$tmp")
+    rm -f "$tmp"
     out_total "$count" "rules"
+}
+
+# ── plugin discovery ─────────────────────────────────────────────────────────
+
+# Returns a list of "label\tpath" lines for every installed plugin that has
+# at least one component directory (agents/ skills/ commands/ rules/).
+discover_plugins() {
+    local plugins_dir="$HOME/.claude/plugins"
+    local seen=()
+
+    # Helper: emit a plugin entry if the path has component dirs and is new
+    emit_plugin() {
+        local path="$1" label="$2"
+        [[ -d "$path" ]] || return
+        # Must contain at least one known component dir to be worth showing
+        local has_components=false
+        for d in agents skills commands rules; do
+            if [[ -d "$path/$d" ]]; then has_components=true; break; fi
+        done
+        [[ "$has_components" == true ]] || return
+        # Deduplicate by real path
+        local real
+        real=$(realpath "$path" 2>/dev/null || echo "$path")
+        for s in "${seen[@]}"; do [[ "$s" == "$real" ]] && return; done
+        seen+=("$real")
+        printf '%s\t%s\n' "$label" "$path"
+    }
+
+    # 1. Parse installed_plugins.json for official install paths
+    local json="$plugins_dir/installed_plugins.json"
+    if [[ -f "$json" ]]; then
+        while IFS= read -r install_path; do
+            [[ -z "$install_path" ]] && continue
+            # Skip paths inside any meta directory (cache, data, etc.)
+            local skip=false
+            for m in cache data; do
+                if [[ "$install_path" == *"/$m/"* || "$install_path" == *"/$m" ]]; then
+                    skip=true; break
+                fi
+            done
+            [[ "$skip" == true ]] && continue
+            # Strip version-like suffixes (numbers/semver) to get a clean name
+            local clean_name
+            clean_name=$(basename "$(dirname "$install_path")")
+            emit_plugin "$install_path" "PLUGIN  $clean_name"
+        done < <(grep '"installPath"' "$json" | sed 's/.*"installPath": *"\([^"]*\)".*/\1/' | sort -u)
+    fi
+
+    # 2. Scan direct subdirectories of ~/.claude/plugins/ (manually placed plugins)
+    local -a meta_dirs=(cache data marketplaces)
+    if [[ -d "$plugins_dir" ]]; then
+        while IFS= read -r subdir; do
+            [[ -d "$subdir" ]] || continue
+            local dname
+            dname=$(basename "$subdir")
+            # Skip known meta directories
+            local skip=false
+            for m in "${meta_dirs[@]}"; do
+                if [[ "$dname" == "$m" ]]; then skip=true; break; fi
+            done
+            [[ "$skip" == true ]] && continue
+            emit_plugin "$subdir" "PLUGIN  $dname"
+        done < <(find_dirs "$plugins_dir" -mindepth 1 -maxdepth 1 | sort)
+    fi
+
+    # 3. Scan one level inside ~/.claude/plugins/marketplaces/ (marketplace-installed plugins)
+    local marketplaces_dir="$plugins_dir/marketplaces"
+    if [[ -d "$marketplaces_dir" ]]; then
+        while IFS= read -r subdir; do
+            [[ -d "$subdir" ]] || continue
+            local dname
+            dname=$(basename "$subdir")
+            # Skip meta directories (cache, data, etc.)
+            local skip=false
+            for m in "${meta_dirs[@]}"; do
+                if [[ "$dname" == "$m" ]]; then skip=true; break; fi
+            done
+            [[ "$skip" == true ]] && continue
+            emit_plugin "$subdir" "PLUGIN  $dname"
+        done < <(find_dirs "$marketplaces_dir" -mindepth 1 -maxdepth 1 | sort)
+    fi
 }
 
 # ── scope runner ──────────────────────────────────────────────────────────────
@@ -359,10 +515,10 @@ print_scope() {
     out_scope_header "$label" "$root"
 
     out_section_header "AGENTS" "$CYAN"
-    if [[ -f "$root/AGENTS.md" ]]; then
-        print_agents_from_table "$root/AGENTS.md"
-    elif [[ -d "$root/agents" ]]; then
+    if [[ -d "$root/agents" ]]; then
         print_agents_from_dir "$root/agents"
+    elif [[ -f "$root/AGENTS.md" ]]; then
+        print_agents_from_table "$root/AGENTS.md"
     else
         out_not_found "agents"
     fi
@@ -406,6 +562,10 @@ fi
 
 if $SHOW_GLOBAL; then
     print_scope "$HOME/.claude" "GLOBAL (~/.claude)"
+
+    while IFS=$'\t' read -r label path; do
+        print_scope "$path" "$label"
+    done < <(discover_plugins)
 fi
 
 [[ $OUTPUT_MODE == term ]] && echo

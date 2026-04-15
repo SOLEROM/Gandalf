@@ -46,6 +46,9 @@ My custom assistant for LLM agents development and management based on public to
 * skills repo update:
 ```
 git submodule add  https://github.com/SOLEROM/skill_XXXXX 11_mySubsSkills/skill_XXXX
+
+//  pull update all submodules
+git pull --recurse-submodules
 ```
 * test skill by [dev/skillTester](./dev/skillTests.md)
 
