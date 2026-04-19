@@ -1,6 +1,6 @@
 ---
 name: master-workers-qa
-description: Single-file multi-agent execution with one master, generic workers, and one QA gate.
+description: On-demand multi-agent orchestration with one master, generic workers, and one QA gate. Trigger this skill when the user explicitly runs it by name or asks to orchestrate a task file through a master/worker/QA pipeline.
 ---
 
 # Master / Workers / QA
@@ -42,6 +42,19 @@ CONFIG:
 
 ---
 
+# Bundled Resources
+
+This skill folder may contain the following resource files. Check for their presence at startup and load them as described:
+
+| File | When to load |
+|---|---|
+| `task-template.md` | Load when initializing a new task file from scratch or when the user has no existing managed file |
+| `task-normalize-template.md` | Load before normalizing any raw input file — use as the canonical format reference |
+
+If either file is missing, fall back to the inline format definitions in this document.
+
+---
+
 # Core Invariants
 
 1. There is exactly one authoritative task file.
@@ -52,7 +65,7 @@ CONFIG:
 6. Workers never write the task file directly.
 7. QA only decides final success or final failure.
 8. If any task fails `retry_limit` times, the whole run fails.
-9. The master must publish a final status summary.
+9. The master must publish a final status tree and summary.
 
 ---
 
@@ -78,7 +91,7 @@ The master may normalize that file by:
 * reordering tasks
 * creating new top-level tasks if needed
 
-The master must preserve the original intent.
+The master must preserve the original intent. If `task-normalize-template.md` is present, use it as the format reference for normalization.
 
 ---
 
@@ -111,7 +124,7 @@ Do not mark intermediate failed attempts as `[x]` until retry limit is reached.
 The master must:
 
 * validate the input file
-* normalize the file into managed format
+* normalize the file into managed format (using `task-normalize-template.md` if present)
 * keep that same file as the only source of truth
 * assign task IDs
 * improve wording where needed
@@ -122,7 +135,7 @@ The master must:
 * retry failed tasks with another worker when possible
 * stop the run when retry limit is reached
 * send the final top task to QA
-* publish the final report
+* publish the final status tree and summary
 
 ## Workers
 
@@ -131,8 +144,8 @@ Workers must:
 * work only on assigned tasks
 * never edit the task file directly
 * self-check before returning results
-* report completion, failure, blockage, or proposed decomposition
-* propose subtasks when appropriate
+* report completion or failure by returning a structured result (see **Worker Result Format**)
+* propose subtasks when a task needs decomposition
 * never declare final success or failure
 
 ## QA
@@ -145,6 +158,111 @@ QA must:
 * explain what is still wrong or missing
 * reopen the top task through master-controlled update flow
 * be the only authority for final success or final failure
+
+---
+
+# Worker Result Format
+
+When a worker finishes an assigned task, it must return a structured result to the master. The master uses this to update the task file.
+
+```
+WORKER RESULT
+task_id: T001
+status: completed | failed | blocked | decompose
+output: <brief description of what was done or produced>
+proposed_subtasks:        # only when status is decompose
+  - T001.1: <description>
+  - T001.2: <description>
+failure_reason:           # only when status is failed or blocked
+  <what went wrong>
+```
+
+The master reads this result and applies the appropriate update to the task file. Workers never touch the file directly.
+
+---
+
+# Status Tree
+
+After every meaningful state change, and always at the end of a run, the master must render a status tree to the console. This gives a live view of the entire task hierarchy and its current state.
+
+## Format
+
+```
+[status] [ID] Task title
+    [status] [ID.1] Subtask title
+        [status] [ID.1.1] Deeper subtask
+    [status] [ID.2] Subtask title
+```
+
+## Legend line (always include below the tree)
+
+```
+Legend: [] not started  [/] in progress  [>] has subtasks  [v] done  [x] failed
+```
+
+## Example
+
+```
+[v] [T001] Set up project scaffold
+    [v] [T001.1] Create directory structure
+    [v] [T001.2] Initialize config files
+[/] [T002] Implement parser
+    [v] [T002.1] Define grammar rules
+    [/] [T002.2] Write tokenizer
+    [] [T002.3] Write AST builder
+[] [T003] Write tests
+[x] [T004] Deploy to staging  ← failed after 3 attempts
+
+Legend: [] not started  [/] in progress  [>] has subtasks  [v] done  [x] failed
+```
+
+The tree must reflect the exact current state of the task file at the time it is rendered.
+
+---
+
+# Logging (enable_log)
+
+## enable_log: false (default)
+
+The master operates silently except for:
+- the status tree after each batch of updates
+- worker result summaries
+- the final report
+
+## enable_log: true
+
+When logging is enabled, the master narrates every stage it takes, both to the console and into the final report. Each log entry should be prefixed with a stage label.
+
+Stages to narrate:
+
+| Stage label | When to emit |
+|---|---|
+| `[VALIDATE]` | Checking the task file for validity |
+| `[NORMALIZE]` | Rewriting the file into managed format |
+| `[SCHEDULE]` | Selecting the next batch of tasks to assign |
+| `[ASSIGN]` | Sending a task to a worker |
+| `[WORKER RESULT]` | Receiving and processing a worker result |
+| `[RETRY]` | Retrying a failed task |
+| `[DECOMPOSE]` | Splitting a task into subtasks |
+| `[QA]` | Sending to QA and receiving verdict |
+| `[QA REJECT]` | Reopening a task after QA rejection |
+| `[FAIL]` | A task has reached retry limit |
+| `[COMPLETE]` | All tasks done, QA approved |
+
+Example verbose output:
+
+```
+[VALIDATE] Task file found at tasks.md. 3 raw tasks detected.
+[NORMALIZE] Rewriting into managed format using task-normalize-template.md.
+[SCHEDULE] Dependency-ready tasks: T001, T002. Assigning up to 4 workers.
+[ASSIGN] T001 → Worker 1
+[ASSIGN] T002 → Worker 2
+[WORKER RESULT] T001 completed. Output: directory structure created.
+[WORKER RESULT] T002 failed. Reason: missing dependency on T001.
+[RETRY] T002 reassigned to Worker 3. Attempt 2/3.
+```
+
+When `enable_log: true`, the final report must include the full stage log as an appended section.
 
 ---
 
@@ -176,6 +294,8 @@ Optional fields:
 * `owner`
 * `last_fail`
 
+If `task-template.md` is present, use it as the canonical structure for new task entries.
+
 ---
 
 # Single-File Safety
@@ -183,7 +303,7 @@ Optional fields:
 To avoid race conditions:
 
 * only the master writes the file
-* workers only propose updates
+* workers only propose updates via the Worker Result Format
 * QA feedback is written through the master
 * no shadow task file is used
 * no worker-local plan is authoritative
@@ -220,7 +340,7 @@ A worker may decide a task must be split.
 Flow:
 
 1. worker receives task
-2. worker proposes subtasks to master
+2. worker returns result with `status: decompose` and `proposed_subtasks`
 3. master validates the proposal
 4. master updates the file
 5. parent becomes `[>]`
@@ -274,18 +394,23 @@ Workers and master may believe work is done, but only QA can finalize the result
 
 # Final Report
 
-At the end, the master must report:
+At the end of every run, the master must publish:
 
-* overall result: success or failure
-* top-level task status
-* completed tasks
-* failed tasks
-* unresolved tasks
-* retry and failure summary
-* whether QA approved or rejected
+1. **Status tree** — full task hierarchy with final states (see Status Tree section)
+2. **Overall result** — `SUCCESS` or `FAILURE`
+3. **Summary table**:
 
-If `enable_log: true`, a run log may be kept in the same file.
-If `enable_log: false`, only minimal task-level failure metadata is required.
+| Category | Count |
+|---|---|
+| Completed | N |
+| Failed (terminal) | N |
+| Not started | N |
+| Total retries | N |
+
+4. **QA verdict** — approved or rejected, with reason if rejected
+5. **Failed task details** — for each `[x]` task: ID, title, failure reason, number of attempts
+
+If `enable_log: true`, append the full stage log after the summary.
 
 ---
 
@@ -306,17 +431,18 @@ Refuse to start if:
 1. Validate explicit task file path.
 2. Validate file exists.
 3. Validate at least one raw `[]` task exists.
-4. Normalize the file in place.
-5. Assign IDs and metadata.
-6. Clarify wording and fix typos if needed.
-7. Schedule dependency-ready tasks.
-8. Collect worker results.
-9. Apply approved updates through the master only.
-10. Retry failed tasks until success or retry limit.
-11. Send final top task to QA.
-12. If QA rejects, reopen and continue.
-13. If QA approves, finish successfully.
-14. If retry limit is exceeded, fail the run.
-15. Publish final status summary.
-
-
+4. Check for `task-normalize-template.md` and `task-template.md` in skill folder; load if present.
+5. Normalize the file in place (using template if available).
+6. Assign IDs and metadata.
+7. Clarify wording and fix typos if needed.
+8. Render initial status tree.
+9. Schedule dependency-ready tasks.
+10. Collect worker results via Worker Result Format.
+11. Render updated status tree after each batch.
+12. Apply approved updates through the master only.
+13. Retry failed tasks until success or retry limit.
+14. Send final top task to QA.
+15. If QA rejects, reopen and continue from step 9.
+16. If QA approves, finish successfully.
+17. If retry limit is exceeded, fail the run.
+18. Publish final report (status tree + summary + log if enabled).
