@@ -1,10 +1,32 @@
 {
   "name": "context-bar",
-  "version": "0.1.1",
-  "description": "Your context window as a stacked bar above the prompt, a color per category, with token counts and the compaction point. /context-bar shows or hides it.",
+  "version": "0.3.0",
+  "description": "Your context window as a stacked bar, a color per category, with token counts and the compaction point. Above the prompt, under it or in a pane (the position option). /context-bar shows or hides it.",
   "author": {
     "name": "Hamza Zafar",
     "url": "https://github.com/hamzafer"
   },
-  "types": "./types/index.d.ts"
+  "types": "./types/index.d.ts",
+  "dependencies": [
+    "mods"
+  ],
+  "userConfig": {
+    "position": {
+      "type": "string",
+      "title": "Position",
+      "description": "Where the bar is drawn: above (boxed bar above the prompt), below (one line under the prompt) or pane (a sidebar in fullscreen mode, a full view otherwise)",
+      "options": [
+        "above",
+        "below",
+        "pane"
+      ],
+      "default": "above"
+    },
+    "legend": {
+      "type": "boolean",
+      "title": "Legend",
+      "description": "Show the legend lines under the boxed bar (above and pane)",
+      "default": true
+    }
+  }
 }

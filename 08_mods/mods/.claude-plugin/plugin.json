@@ -1,0 +1,9 @@
+{
+  "name": "mods",
+  "version": "0.1.0",
+  "description": "/mods hide|show hides or shows every gandalf mod at once. The choice is kept across sessions.",
+  "author": {
+    "name": "vladSolov"
+  },
+  "types": "./types/index.d.ts"
+}

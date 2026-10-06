@@ -8,8 +8,11 @@ export type Reading = {
   compactsAt?: number // where auto-compaction runs, when it is on
 }
 
+// Where the bar is drawn: the band above the prompt, the line under it, or a pane.
+export type Position = 'above' | 'below' | 'pane'
+
 declare module 'claude-code' {
   interface PluginState {
-    'context-bar': { reading: Reading | null; isHidden: boolean }
+    'context-bar': { reading: Reading | null; isHidden: boolean; position: Position; hasLegend: boolean }
   }
 }

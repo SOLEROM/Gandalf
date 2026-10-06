@@ -8,22 +8,43 @@
 # The mods are copied to ~/.claude/mods/gandalf-mods and installed from there, so this
 # folder can be moved or deleted afterwards. After editing a mod, re-run this to push it.
 #
-# Usage: ./install.sh            install all mods (safe to re-run)
-#        ./install.sh <mod>...   only these mods
+# config.json holds each mod's options ({"<mod>": {"<option>": value}}); every run applies
+# them with `claude plugin configure`, which saves them in ~/.claude/settings.json.
+#
+# Usage: ./install.sh                          install all mods (safe to re-run)
+#        ./install.sh <mod>...                 only these mods
+#        ./install.sh --set <mod>.<key>=<val>  change an option in config.json, then install
+#        e.g. ./install.sh --set context-bar.position=below
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MARKET=gandalf-mods
+CONFIG="$ROOT/config.json"
 ONLY=()
-for a in "$@"; do
-  case "$a" in
-    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
-    *) ONLY+=("$a") ;;
+SETS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
+    --set) [ $# -ge 2 ] || { echo "--set needs <mod>.<key>=<value>" >&2; exit 1; }; SETS+=("$2"); shift ;;
+    --set=*) SETS+=("${1#--set=}") ;;
+    *) ONLY+=("$1") ;;
   esac
+  shift
 done
 
 command -v claude >/dev/null || { echo "claude CLI not found" >&2; exit 1; }
 command -v jq >/dev/null || { echo "jq is required" >&2; exit 1; }
+
+# 0. Apply --set to config.json. true/false/numbers are kept as JSON, anything else is a string.
+[ -f "$CONFIG" ] || echo '{}' > "$CONFIG"
+for kv in "${SETS[@]}"; do
+  key="${kv%%=*}" val="${kv#*=}"
+  mod="${key%%.*}" opt="${key#*.}"
+  [[ "$kv" == *=* && "$key" == *.* && -n "$mod" && -n "$opt" ]] || { echo "--set $kv: expected <mod>.<key>=<value>" >&2; exit 1; }
+  jq --arg m "$mod" --arg k "$opt" --arg v "$val" \
+    '.[$m][$k] = ($v | try fromjson catch $v)' "$CONFIG" > "$CONFIG.tmp" && mv "$CONFIG.tmp" "$CONFIG"
+  echo "config.json: $mod.$opt = $val"
+done
 
 # 1. Regenerate the marketplace manifest from the mod folders.
 mkdir -p "$ROOT/.claude-plugin"
@@ -43,7 +64,7 @@ claude plugin validate "$ROOT" >/dev/null
 # 2. Copy the mods to a host-owned location, so nothing points back at this folder.
 DEST="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/mods/$MARKET"
 mkdir -p "$DEST"
-rsync -a --delete --exclude .git --exclude node_modules --exclude install.sh "$ROOT/" "$DEST/"
+rsync -a --delete --exclude .git --exclude node_modules --exclude install.sh --exclude config.json "$ROOT/" "$DEST/"
 
 # 3. Register (or refresh) the marketplace from that copy.
 registered="$(claude plugin marketplace list --json | jq -r --arg n "$MARKET" '.[] | select(.name == $n) | .path // ""')"
@@ -66,6 +87,12 @@ for name in $(jq -r '.plugins[].name' "$ROOT/.claude-plugin/marketplace.json"); 
     claude plugin update "$id"
   else
     claude plugin install "$id"
+  fi
+  # 5. Apply its options from config.json (configure takes every value as a string).
+  opts="$(jq -c --arg m "$name" '.[$m] // {} | map_values(tostring)' "$CONFIG")"
+  if [ "$opts" != "{}" ]; then
+    claude plugin configure "$id" --values-stdin <<<"$opts" >/dev/null
+    echo "$name options: $opts"
   fi
 done
 

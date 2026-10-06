@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { cells, legend, share, toReading, tokens } from '../hooks/register'
+import { cells, legend, line, parseOptions, share, toReading, tokens } from '../hooks/register'
 
 const BAND = { component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 20, bodyColumns: 84 } }
 
@@ -31,9 +31,13 @@ const BREAKDOWN = {
   autocompactSource: 'model-default',
 }
 
-// Stands for the engine beneath the mod.
-function engine(on: any, store: Record<string, unknown> = {}) {
+// Stands for the engine beneath the mod; `options` are the plugin options in settings.json.
+function engine(on: any, store: Record<string, unknown> = {}, options?: Record<string, unknown>) {
   const asked: unknown[] = []
+  const ui = { status: undefined as string | undefined }
+  on('settings.read', () => ({ value: options ? { pluginConfigs: { 'context-bar@gandalf-mods': { options } } } : {} }))
+  on('ui.status', (_$: any, e: any) => ((ui.status = e.text ?? undefined), { value: undefined }))
+  on('ui.invalidate', () => ({ value: undefined }))
   on('session.start', (_$: any, e: any) => ({ sessionId: 's', cwd: e.cwd }))
   on('command.register', () => ({ value: undefined }))
   on('turn.complete', () => ({ text: '' }))
@@ -44,7 +48,7 @@ function engine(on: any, store: Record<string, unknown> = {}) {
     return { value: { startedAt: 0, context: { tokens: 204_000, window: 1_000_000, percent: 20, breakdown: BREAKDOWN }, rateLimits: {}, cost: { usd: 0 } } }
   })
   on('ui.render', ($: any, e: any) => $.ui.resolve(e).Text({ children: 'band below' }))
-  return { asked, store }
+  return { asked, store, ui }
 }
 
 const settle = () => new Promise(done => (globalThis as any).setTimeout(done, 20)) // the first refresh runs in the background
@@ -140,6 +144,74 @@ describe('context-bar', () => {
     await settle()
     const band = await $.ui.mount({ plugin: 'context-bar', surface: 'terminal', ...BAND } as any)
     expect(await band.find({ type: 'Text', text: /of 1M/ })).toBeUndefined()
+    await band.unmount()
+  })
+
+  test('options: position and legend from settings, bad values ignored', () => {
+    expect(parseOptions({ position: 'Below', legend: 'false' })).toEqual({ position: 'below', legend: false })
+    expect(parseOptions({ position: 'top', legend: true })).toEqual({ legend: true })
+    expect(parseOptions(undefined)).toEqual({})
+    const r = toReading(BREAKDOWN)
+    expect(line(r)).toMatch(/^◆ context [█─░]{24} 20% · 204k of 1M · compacts at 950k$/)
+  })
+
+  test('position below: one line under the prompt, nothing above it', async ($, on) => {
+    const { ui } = engine(on, {}, { position: 'below' })
+    await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' } as any)
+    await settle()
+    expect(ui.status).toMatch(/^◆ context .* 20% · 204k of 1M/)
+    const band = await $.ui.mount({ plugin: 'context-bar', surface: 'terminal', ...BAND } as any)
+    expect(await band.find({ type: 'Text', text: /of 1M/ })).toBeUndefined()
+    expect(await band.find({ type: 'Text', text: 'band below' })).toBeDefined()
+    await band.unmount()
+    expect((await $.command.run({ command: 'context-bar', args: '' } as any)).text).toMatch(/hidden/)
+    expect(ui.status).toBeUndefined() // hiding takes the line away too
+  })
+
+  test('position pane: draws the bar in its pane, not above the prompt', async ($, on) => {
+    engine(on, {}, { position: 'pane', legend: 'false' })
+    await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' } as any)
+    await settle()
+    const pane = await $.ui.mount({ plugin: 'context-bar', surface: 'terminal', component: 'Pane', requestId: 'context-bar', props: { bodyColumns: 60 } } as any)
+    expect(await pane.find({ type: 'Text', text: /204k of 1M/ })).toBeDefined()
+    expect(await pane.find({ type: 'Text', text: /^messages $/ })).toBeUndefined() // legend off
+    await pane.unmount()
+    const band = await $.ui.mount({ plugin: 'context-bar', surface: 'terminal', ...BAND } as any)
+    expect(await band.find({ type: 'Text', text: /of 1M/ })).toBeUndefined()
+    await band.unmount()
+  })
+
+  test('/context-bar <position> moves it for the session', async ($, on) => {
+    const { ui } = engine(on)
+    await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' } as any)
+    await settle()
+    expect((await $.command.run({ command: 'context-bar', args: 'below' } as any)).text).toMatch(/below the prompt/)
+    expect(ui.status).toMatch(/20%/)
+    expect((await $.command.run({ command: 'context-bar', args: 'pane' } as any)).text).toMatch(/in a pane/)
+    expect(ui.status).toBeUndefined() // the line goes when the bar moves
+    let band = await $.ui.mount({ plugin: 'context-bar', surface: 'terminal', ...BAND } as any)
+    expect(await band.find({ type: 'Text', text: /of 1M/ })).toBeUndefined()
+    await band.unmount()
+    expect((await $.command.run({ command: 'context-bar', args: 'above' } as any)).text).toMatch(/above the prompt/)
+    band = await $.ui.mount({ plugin: 'context-bar', surface: 'terminal', ...BAND } as any)
+    expect(await band.find({ type: 'Text', text: /of 1M/ })).toBeDefined()
+    await band.unmount()
+    expect((await $.command.run({ command: 'context-bar', args: 'top' } as any)).text).toMatch(/Unknown position/)
+  })
+})
+
+describe('context-bar under /mods hide', () => {
+  test('draws nothing while the mods plugin hides every mod', async ($, on) => {
+    // The mods plugin's switch, as the engine hands it to a reader; context-bar's own state stays the host's.
+    on('state.get', { plugin: 'mods', key: 'isHidden' }, () => ({ value: { value: true, version: 1 } }))
+    const { ui } = engine(on, {}, { position: 'below' })
+    await $.session.start({ surface: 'terminal', isInteractive: true, cwd: '/work' } as any)
+    await settle()
+    expect(ui.status).toBeUndefined() // no line under the prompt
+    expect((await $.command.run({ command: 'context-bar', args: 'above' } as any)).text).toMatch(/above the prompt/)
+    const band = await $.ui.mount({ plugin: 'context-bar', surface: 'terminal', ...BAND } as any)
+    expect(await band.find({ type: 'Text', text: /of 1M/ })).toBeUndefined() // nor above it, even after /context-bar above
+    expect(await band.find({ type: 'Text', text: 'band below' })).toBeDefined()
     await band.unmount()
   })
 })

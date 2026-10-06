@@ -7,9 +7,15 @@
   "plugins": [
     {
       "name": "context-bar",
-      "description": "Your context window as a stacked bar above the prompt, a color per category, with token counts and the compaction point. /context-bar shows or hides it.",
-      "version": "0.1.1",
+      "description": "Your context window as a stacked bar, a color per category, with token counts and the compaction point. Above the prompt, under it or in a pane (the position option). /context-bar shows or hides it.",
+      "version": "0.3.0",
       "source": "./context"
+    },
+    {
+      "name": "mods",
+      "description": "/mods hide|show hides or shows every gandalf mod at once. The choice is kept across sessions.",
+      "version": "0.1.0",
+      "source": "./mods"
     }
   ]
 }
