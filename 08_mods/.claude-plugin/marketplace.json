@@ -1,0 +1,15 @@
+{
+  "name": "gandalf-mods",
+  "description": "Personal Claude Code mods",
+  "owner": {
+    "name": "vladSolov"
+  },
+  "plugins": [
+    {
+      "name": "context-bar",
+      "description": "Your context window as a stacked bar above the prompt, a color per category, with token counts and the compaction point. /context-bar shows or hides it.",
+      "version": "0.1.1",
+      "source": "./context"
+    }
+  ]
+}
